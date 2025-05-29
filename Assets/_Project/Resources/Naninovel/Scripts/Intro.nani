@@ -1,30 +1,37 @@
-; Начало сцены
 @back Day
-@char a appearance:Idle pos:50,13
-
-A "Пожалуйста, мне нужна ваша помощь! Справитесь?"
+@char a Idle pos:50,13
+a "Пожалуйста, мне нужна ваша помощь! Справитесь?"
 
 @choice "Помочь"     goto:.Agree
 @choice "Отказаться" goto:.Disagree
 @stop
 
 # Agree
-@addScore Value:10
-@startPairs
+@addScore Value:10 
+@hide a
+@hide Dialogue
+@back Tavern
+@startPairs 
+@back Day 
 @checkScore good:.GoodEnd bad:.BadEnd MinGood:10
 
 # Disagree
-@startPairs
-@char a appearance:Angry
-A "Жаль, что вы отказались... Это было важно."
-@goto .BadEnd
+@addScore Value:2 
+@hide a
+@hide Dialogue
+@back Tavern
+@startPairs 
+@back Day 
+@checkScore good:.GoodEnd bad:.BadEnd MinGood:10
 
 # GoodEnd
-@char a appearance:Happy
-A "Спасибо за помощь! Вы настоящий герой!"
-@back Day
-@stop                    
+@char a Happy
+a "Спасибо за помощь! Вы настоящий герой!"
+@title 
+@stop
 
 # BadEnd
-@back Day
+@char a Angry
+a "Жаль, что вы отказались... Это было важно."
+@title
 @stop
