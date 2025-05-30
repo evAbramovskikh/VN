@@ -1,0 +1,35 @@
+﻿<!-- PairsGame.uxml -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="pairs-game-root" class="game-container">
+        
+        <!-- Игровая информация -->
+        <ui:VisualElement name="game-header" class="header">
+            <ui:Label name="moves-count" text="Ходов: 0" class="info-label" />
+            <ui:Label name="matches-count" text="Найдено пар: 0/8" class="info-label" />
+            <ui:VisualElement name="progress-bar" class="progress-bar">
+                <ui:VisualElement name="progress-fill" class="progress-fill" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        
+        <!-- Игровое поле -->
+        <ui:VisualElement name="game-board" class="board">
+            <!-- Карты будут добавлены динамически -->
+        </ui:VisualElement>
+        
+        <!-- Оверлей загрузки -->
+        <ui:VisualElement name="loading-overlay" class="overlay loading-overlay" style="display: none;">
+            <ui:VisualElement class="loading-spinner" />
+            <ui:Label text="Загрузка..." class="loading-text" />
+        </ui:VisualElement>
+        
+        <!-- Оверлей завершения игры -->
+        <ui:VisualElement name="completed-overlay" class="overlay completed-overlay" style="display: none;">
+            <ui:VisualElement class="completed-content">
+                <ui:Label text="Поздравляем!" class="completed-title" />
+                <ui:Label text="Вы нашли все пары!" class="completed-subtitle" />
+                <ui:Label name="completed-moves" class="completed-moves" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        
+    </ui:VisualElement>
+</ui:UXML>
