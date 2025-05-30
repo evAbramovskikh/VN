@@ -1,5 +1,4 @@
-﻿<!-- PairsGame.uxml -->
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+﻿<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
     <ui:VisualElement name="pairs-game-root" class="game-container">
         
         <!-- Игровая информация -->
@@ -18,7 +17,6 @@
         
         <!-- Оверлей загрузки -->
         <ui:VisualElement name="loading-overlay" class="overlay loading-overlay" style="display: none;">
-            <ui:VisualElement class="loading-spinner" />
             <ui:Label text="Загрузка..." class="loading-text" />
         </ui:VisualElement>
         
@@ -27,7 +25,7 @@
             <ui:VisualElement class="completed-content">
                 <ui:Label text="Поздравляем!" class="completed-title" />
                 <ui:Label text="Вы нашли все пары!" class="completed-subtitle" />
-                <ui:Label name="completed-moves" class="completed-moves" />
+                <ui:Label name="completed-moves" text="" class="completed-moves" />
             </ui:VisualElement>
         </ui:VisualElement>
         

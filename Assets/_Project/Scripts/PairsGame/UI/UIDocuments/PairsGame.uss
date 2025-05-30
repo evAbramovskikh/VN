@@ -1,22 +1,7 @@
-﻿/* CSS переменные для анимаций */
-:root {
-    --flip-duration: 0.6s;
-    --card-size: 140px;
-    --gap: 10px;
-    --primary-color: #e94560;
-    --secondary-color: #0f3460;
-    --success-color: #4CAF50;
-    --bg-color: #1a1a2e;
-    --progress: 0;
-}
-
-/* Основной контейнер */
+﻿/* Основной контейнер */
 .game-container {
-    flex: 1;
-    background-color: var(--bg-color);
-    background-image:
-            radial-gradient(circle at 20% 80%, rgba(233, 69, 96, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(15, 52, 96, 0.1) 0%, transparent 50%);
+    flex-grow: 1;
+    background-color: #1a1a2e;
     padding: 20px;
     align-items: center;
     justify-content: center;
@@ -32,9 +17,10 @@
 
 .info-label {
     font-size: 24px;
-    color: #eee;
+    color: #eeeeee;
     -unity-font-style: bold;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.5);
     margin-bottom: 10px;
 }
 
@@ -44,14 +30,13 @@
     height: 8px;
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
-    overflow: hidden;
 }
 
 .progress-fill {
     height: 100%;
-    width: calc(var(--progress) * 100%);
-    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
-    transition: width 0.3s ease;
+    background-color: #4CAF50;
+    transition-duration: 0.3s;
+    transition-property: width;
 }
 
 /* Игровое поле */
@@ -61,40 +46,33 @@
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: space-between;
-    align-content: space-between;
-    perspective: 1000px;
+    align-content: center;
 }
 
 /* Карта */
 .card {
-    width: var(--card-size);
-    height: var(--card-size);
+    width: 140px;
+    height: 140px;
     margin: 5px;
-    cursor: pointer;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.3s ease;
+    border-radius: 10px;
+    border-width: 2px;
+    border-color: #0f3460;
+    transition-duration: 0.2s;
+    transition-property: scale;
 }
 
-.card:hover:not(.disabled):not(.matched) {
-    transform: translateY(-5px);
+.card:hover {
+    scale: 1.05;
+    border-color: #e94560;
 }
 
 .card.disabled {
-    cursor: default;
+    opacity: 0.8;
 }
 
-/* Контейнер для 3D переворота */
-.card-container {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform var(--flip-duration) cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-container.flipped {
-    transform: rotateY(180deg);
+.card.matched {
+    opacity: 0.3;
+    border-color: #4CAF50;
 }
 
 /* Лица карты */
@@ -102,89 +80,24 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    backface-visibility: hidden;
-    border-radius: 10px;
-    border-width: 2px;
-    border-color: var(--secondary-color);
     -unity-background-scale-mode: scale-to-fit;
 }
 
 .card-back {
-    background-color: var(--secondary-color);
-    background-image: linear-gradient(45deg, var(--secondary-color) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--secondary-color) 25%, transparent 25%);
+    background-color: #0f3460;
 }
 
 .card-front {
-    background-color: #eee;
-    transform: rotateY(180deg);
+    background-color: #eeeeee;
+    display: none;
 }
 
-/* Эффект свечения */
-.glow-effect {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border-radius: 10px;
-    background: radial-gradient(circle, rgba(233, 69, 96, 0.5) 0%, transparent 70%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
+.card-front.visible {
+    display: flex;
 }
 
-/* Состояние найденной пары */
-.card.matched {
-    animation: match-pulse 0.6s ease;
-}
-
-.card.matched .card-container {
-    transform: rotateY(180deg) scale(0.8);
-    opacity: 0.3;
-}
-
-/* Анимация появления карт */
-.card-appear {
-    animation: slide-up 0.5s ease forwards;
-}
-
-/* Эффект звезд для совпадения */
-.stars-container {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-
-.star {
-    position: absolute;
-    width: 30px;
-    height: 30px;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    animation: star-burst 1s ease forwards;
-}
-
-.star::before {
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 2px;
-    background-color: var(--success-color);
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
-}
-
-.star::after {
-    content: "";
-    position: absolute;
-    width: 2px;
-    height: 100%;
-    background-color: var(--success-color);
-    left: 50%;
-    top: 0;
-    transform: translateX(-50%);
+.card-back.hidden {
+    display: none;
 }
 
 /* Оверлеи */
@@ -197,150 +110,94 @@
     background-color: rgba(0, 0, 0, 0.8);
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(5px);
 }
 
-/* Анимации загрузки */
-.loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+/* Загрузка */
+.loading-overlay {
+    background-color: rgba(0, 0, 0, 0.9);
 }
 
 .loading-text {
-    font-size: 24px;
-    color: #fff;
-    margin-top: 20px;
-    animation: pulse 1.5s ease infinite;
+    font-size: 36px;
+    color: #ffffff;
+    -unity-font-style: bold;
 }
 
 /* Завершение игры */
+.completed-overlay {
+    background-color: rgba(0, 0, 0, 0.85);
+}
+
 .completed-content {
     align-items: center;
     padding: 40px;
-    background-color: var(--bg-color);
+    background-color: #16213e;
     border-radius: 20px;
     border-width: 3px;
-    border-color: var(--success-color);
-    animation: zoom-in 0.5s ease;
+    border-color: #4CAF50;
 }
 
 .completed-title {
     font-size: 48px;
-    color: var(--success-color);
+    color: #4CAF50;
     -unity-font-style: bold;
     margin-bottom: 10px;
-    animation: bounce 0.6s ease;
 }
 
 .completed-subtitle {
     font-size: 24px;
-    color: #eee;
+    color: #eeeeee;
     margin-bottom: 10px;
 }
 
 .completed-moves {
     font-size: 20px;
-    color: #ccc;
+    color: #cccccc;
 }
 
-/* Конфетти */
-.confetti-container {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    overflow: hidden;
+/* Эффекты анимации */
+.pulse {
+    transition-duration: 0.3s;
+    transition-property: scale;
+    scale: 1.1;
 }
 
-.confetti {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    background-color: var(--primary-color);
-    animation: fall 3s linear forwards;
-}
-
-/* Анимации */
-@keyframes slide-up {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-}
-
-@keyframes match-pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(0.8); }
-}
-
-@keyframes star-burst {
-    0% {
-        transform: translate(-50%, -50%) scale(0) rotate(0deg);
-        opacity: 1;
-    }
-    100% {
-        transform: translate(-50%, -50%) scale(3) rotate(90deg);
-        opacity: 0;
-    }
-}
-
-@keyframes zoom-in {
-    from {
-        transform: scale(0.8);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    25% { transform: translateY(-10px); }
-    75% { transform: translateY(5px); }
-}
-
-@keyframes fall {
-    to {
-        transform: translateY(100vh) rotate(360deg);
-        opacity: 0;
-    }
-}
-
-/* Переходы для fade */
 .fade-in {
-    animation: fadeIn 0.3s ease forwards;
+    opacity: 1;
+    transition-duration: 0.3s;
+    transition-property: opacity;
 }
 
 .fade-out {
-    animation: fadeOut 0.3s ease forwards;
+    opacity: 0;
+    transition-duration: 0.3s;
+    transition-property: opacity;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+/* Анимация появления карт */
+.card-appear {
+    opacity: 0;
+    translate: 0 20px 0;
+    transition-duration: 0.5s;
+    transition-property: opacity;
 }
 
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
+.card-appear.show {
+    opacity: 1;
+    translate: 0 0 0;
+}
+
+/* Простая анимация переворота */
+.card-flipping {
+    transition-duration: 0.3s;
+    transition-property: scale;
+    scale: 0.1 1 1;
+}
+
+/* Состояния видимости для анимаций */
+.show-completed {
+    opacity: 1;
+    scale: 1 1 1;
+    transition-duration: 0.5s;
+    transition-property: opacity;
 }

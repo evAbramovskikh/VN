@@ -4,13 +4,13 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UniRx;
 using Cysharp.Threading.Tasks;
-using PairsGame.Domain.Models;
 using PairsGame.Application.Presenters;
+using PairsGame.Infrastructure;
 
 namespace PairsGame.UI.Views
 {
     /// <summary>
-    /// Интерфейс представления игры с расширенными возможностями
+    /// Интерфейс представления игры
     /// </summary>
     public interface IPairsGameView
     {
@@ -23,26 +23,22 @@ namespace PairsGame.UI.Views
         void SetInteractionEnabled(bool enabled);
         void ShowGameCompleted(int moves);
         void ShowStartAnimation();
-        void ShowMatchAnimation(Card first, Card second);
+        void ShowMatchAnimation(int firstCardIndex, int secondCardIndex);
         void PlaySound(SoundType soundType);
         ICardView GetCardView(int index);
     }
     
     /// <summary>
-    /// View игры с продвинутыми анимациями UI Toolkit
+    /// View игры с UI Toolkit
     /// </summary>
     public sealed class PairsGameView : MonoBehaviour, IPairsGameView
     {
         [SerializeField] private UIDocument _uiDocument;
-        [SerializeField] private StyleSheet _styleSheet;
         [SerializeField] private CardView _cardPrefab;
+        [SerializeField] private GameSettings _gameSettings;
         
         [Header("Audio")]
         [SerializeField] private AudioSource _audioSource;
-        [SerializeField] private AudioClip _flipSound;
-        [SerializeField] private AudioClip _matchSound;
-        [SerializeField] private AudioClip _mismatchSound;
-        [SerializeField] private AudioClip _completeSound;
         
         private VisualElement _root;
         private VisualElement _gameBoard;
@@ -50,6 +46,7 @@ namespace PairsGame.UI.Views
         private Label _matchesLabel;
         private VisualElement _loadingOverlay;
         private VisualElement _completedOverlay;
+        private VisualElement _progressFill;
         
         private readonly List<CardView> _cardViews = new();
         private readonly Subject<int> _cardClickSubject = new();
@@ -71,6 +68,7 @@ namespace PairsGame.UI.Views
             _matchesLabel = _root.Q<Label>("matches-count");
             _loadingOverlay = _root.Q<VisualElement>("loading-overlay");
             _completedOverlay = _root.Q<VisualElement>("completed-overlay");
+            _progressFill = _root.Q<VisualElement>("progress-fill");
             
             // Создаем карты
             CreateCardViews();
@@ -87,13 +85,21 @@ namespace PairsGame.UI.Views
             for (int i = 0; i < totalCards; i++)
             {
                 var cardView = Instantiate(_cardPrefab);
+                
+                // Инициализируем карту со спрайтом рубашки из настроек
+                if (_gameSettings != null && _gameSettings.CardBackSprite != null)
+                {
+                    cardView.Initialize(_gameSettings.CardBackSprite);
+                }
+                
                 var cardElement = cardView.CreateVisualElement();
                 
                 int index = i; // Захват переменной для замыкания
                 cardElement.RegisterCallback<ClickEvent>(_ => OnCardClick(index));
                 
-                // Добавляем индекс для анимаций
+                // Добавляем класс для анимации появления
                 cardElement.AddToClassList($"card-{i}");
+                cardElement.AddToClassList("card-appear");
                 
                 _gameBoard.Add(cardElement);
                 _cardViews.Add(cardView);
@@ -124,10 +130,10 @@ namespace PairsGame.UI.Views
         
         public void SetMovesCount(int moves)
         {
-            // Анимация изменения счетчика
-            _movesLabel.AddToClassList("pulse");
             _movesLabel.text = $"Ходов: {moves}";
             
+            // Небольшая анимация при изменении
+            _movesLabel.AddToClassList("pulse");
             _movesLabel.schedule.Execute(() => 
             {
                 _movesLabel.RemoveFromClassList("pulse");
@@ -138,9 +144,12 @@ namespace PairsGame.UI.Views
         {
             _matchesLabel.text = $"Найдено пар: {matches}/{total}";
             
-            // Анимация прогресса
-            var progress = (float)matches / total;
-            _root.style.SetValue(new StyleFloat("--progress", progress));
+            // Обновляем прогресс бар
+            if (_progressFill != null)
+            {
+                var progress = total > 0 ? (float)matches / total : 0f;
+                _progressFill.style.width = Length.Percent(progress * 100);
+            }
         }
         
         public void SetInteractionEnabled(bool enabled)
@@ -152,25 +161,18 @@ namespace PairsGame.UI.Views
         {
             _completedOverlay.style.display = DisplayStyle.Flex;
             
-            var completedLabel = _completedOverlay.Q<Label>("completed-moves");
-            if (completedLabel != null)
+            var completedMovesLabel = _completedOverlay.Q<Label>("completed-moves");
+            if (completedMovesLabel != null)
             {
-                completedLabel.text = $"Завершено за {moves} ходов!";
+                completedMovesLabel.text = $"Завершено за {moves} ходов!";
             }
             
-            // Сложная анимация появления
+            // Анимация появления
             _completedOverlay.style.opacity = 0;
-            _completedOverlay.style.scale = new Scale(new Vector3(0.8f, 0.8f, 1));
-            
             _completedOverlay.schedule.Execute(() =>
             {
-                _completedOverlay.AddToClassList("show-completed");
-                _completedOverlay.style.opacity = 1;
-                _completedOverlay.style.scale = new Scale(Vector3.one);
+                _completedOverlay.AddToClassList("fade-in");
             }).StartingIn(100);
-            
-            // Анимация конфетти
-            ShowConfettiAnimation();
         }
         
         public void ShowStartAnimation()
@@ -183,43 +185,32 @@ namespace PairsGame.UI.Views
                 
                 if (cardElement != null)
                 {
-                    cardElement.style.opacity = 0;
-                    cardElement.style.translate = new Translate(0, 20, 0);
-                    
                     cardElement.schedule.Execute(() =>
                     {
-                        cardElement.AddToClassList("card-appear");
-                        cardElement.style.opacity = 1;
-                        cardElement.style.translate = new Translate(0, 0, 0);
+                        cardElement.AddToClassList("show");
                     }).StartingIn(delay);
                 }
             }
         }
         
-        public void ShowMatchAnimation(Card first, Card second)
+        public void ShowMatchAnimation(int firstCardIndex, int secondCardIndex)
         {
-            // Анимация успешного совпадения
-            var firstView = GetCardView(first.Position);
-            var secondView = GetCardView(second.Position);
-            
-            if (firstView != null && secondView != null)
-            {
-                // Добавляем визуальные эффекты
-                firstView.ShowMatchEffect();
-                secondView.ShowMatchEffect();
-            }
+            // Анимация совпадения уже реализована в CardView
+            // Здесь в будущем можно будет добавить эффекты дополнительные, может пригодится
+            var firstCard = GetCardView(firstCardIndex);
+            var secondCard = GetCardView(secondCardIndex);
         }
         
         public void PlaySound(SoundType soundType)
         {
-            if (_audioSource == null) return;
+            if (_audioSource == null || _gameSettings == null) return;
             
             AudioClip clip = soundType switch
             {
-                SoundType.Flip => _flipSound,
-                SoundType.Match => _matchSound,
-                SoundType.Mismatch => _mismatchSound,
-                SoundType.Complete => _completeSound,
+                SoundType.Flip => _gameSettings.FlipSound,
+                SoundType.Match => _gameSettings.MatchSound,
+                SoundType.Mismatch => _gameSettings.MismatchSound,
+                SoundType.Complete => _gameSettings.CompletionSound,
                 _ => null
             };
             
@@ -227,43 +218,6 @@ namespace PairsGame.UI.Views
             {
                 _audioSource.PlayOneShot(clip);
             }
-        }
-        
-        private void ShowConfettiAnimation()
-        {
-            // Создаем частицы конфетти
-            var confettiContainer = new VisualElement();
-            confettiContainer.AddToClassList("confetti-container");
-            _root.Add(confettiContainer);
-            
-            for (int i = 0; i < 50; i++)
-            {
-                var confetti = new VisualElement();
-                confetti.AddToClassList("confetti");
-                confetti.style.left = UnityEngine.Random.Range(0, 100) + "%";
-                confetti.style.backgroundColor = GetRandomColor();
-                
-                confettiContainer.Add(confetti);
-            }
-            
-            // Удаляем конфетти через 3 секунды
-            confettiContainer.schedule.Execute(() =>
-            {
-                confettiContainer.RemoveFromHierarchy();
-            }).StartingIn(3000);
-        }
-        
-        private Color GetRandomColor()
-        {
-            var colors = new[] 
-            { 
-                new Color(0.9f, 0.3f, 0.3f),
-                new Color(0.3f, 0.9f, 0.3f),
-                new Color(0.3f, 0.3f, 0.9f),
-                new Color(0.9f, 0.9f, 0.3f),
-                new Color(0.9f, 0.3f, 0.9f)
-            };
-            return colors[UnityEngine.Random.Range(0, colors.Length)];
         }
         
         public ICardView GetCardView(int index)

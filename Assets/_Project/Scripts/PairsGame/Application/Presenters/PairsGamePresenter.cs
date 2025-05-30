@@ -1,7 +1,9 @@
-﻿using System;
+﻿
+using System;
 using System.Linq;
 using PairsGame.Domain.Models;
 using PairsGame.Domain.Services;
+using PairsGame.Infrastructure;
 using PairsGame.UI.Views;
 using UniRx;
 using Cysharp.Threading.Tasks;
@@ -16,14 +18,17 @@ namespace PairsGame.Application.Presenters
     {
         private readonly IGameService _gameService;
         private readonly IPairsGameView _gameView;
+        private readonly GameSettings _gameSettings;
         private readonly CompositeDisposable _disposables;
         
         public PairsGamePresenter(
             IGameService gameService,
-            IPairsGameView gameView)
+            IPairsGameView gameView,
+            GameSettings gameSettings)
         {
             _gameService = gameService;
             _gameView = gameView;
+            _gameSettings = gameSettings;
             _disposables = new CompositeDisposable();
         }
         
@@ -66,9 +71,12 @@ namespace PairsGame.Application.Presenters
                             break;
                             
                         case GameEventType.MatchFound:
-                            var matchData = (dynamic)gameEvent.Data;
-                            _gameView.ShowMatchAnimation(matchData.First, matchData.Second);
-                            _gameView.PlaySound(SoundType.Match);
+                            if (gameEvent.Data is { } matchData)
+                            {
+                                var data = (dynamic)matchData;
+                                _gameView.ShowMatchAnimation(data.First.Position, data.Second.Position);
+                                _gameView.PlaySound(SoundType.Match);
+                            }
                             break;
                             
                         case GameEventType.MismatchFound:
@@ -145,6 +153,10 @@ namespace PairsGame.Application.Presenters
                 
                 if (cardView != null)
                 {
+                    // Устанавливаем спрайт для лицевой стороны карты
+                    var frontSprite = _gameSettings.GetCardSprite(card.PairId);
+                    cardView.SetCardImage(frontSprite);
+                    
                     // Реактивная подписка на все изменения карты
                     Observable.CombineLatest(
                         card.IsFlipped,
@@ -158,9 +170,6 @@ namespace PairsGame.Application.Presenters
                             cardView.SetInteractable(cardState.interactable);
                         })
                         .AddTo(_disposables);
-                    
-                    // Устанавливаем изображение карты
-                    cardView.SetCardImage(GetCardSprite(card.PairId));
                 }
             }
         }
@@ -176,11 +185,6 @@ namespace PairsGame.Application.Presenters
             
             // Ждем 2 секунды перед возвратом
             await UniTask.Delay(TimeSpan.FromSeconds(2));
-        }
-        
-        private UnityEngine.Sprite GetCardSprite(int pairId)
-        {
-            return null;
         }
         
         public void Dispose()

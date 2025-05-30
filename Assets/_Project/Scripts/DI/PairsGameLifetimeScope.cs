@@ -19,7 +19,7 @@ namespace DI
         protected override void Configure(IContainerBuilder builder)
         {
             // Регистрируем настройки
-            builder.RegisterInstance(_gameSettings);
+            builder.RegisterInstance(_gameSettings).As<GameSettings>();
             
             // Domain Layer
             builder.Register<ICardRepository, CardRepository>(Lifetime.Scoped);

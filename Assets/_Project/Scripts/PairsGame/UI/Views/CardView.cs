@@ -1,5 +1,7 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.UIElements;
+using Cysharp.Threading.Tasks;
 
 namespace PairsGame.UI.Views
 {
@@ -12,53 +14,45 @@ namespace PairsGame.UI.Views
         void SetMatched(bool matched);
         void SetInteractable(bool interactable);
         void SetCardImage(Sprite sprite);
-        void ShowMatchEffect();
         VisualElement CreateVisualElement();
     }
     
     /// <summary>
-    /// View карты с продвинутыми анимациями
+    /// View карты с простыми анимациями
     /// </summary>
     public class CardView : MonoBehaviour, ICardView
     {
-        [SerializeField] private Sprite _backSprite;
         [SerializeField] private float _flipDuration = 0.3f;
         
         private VisualElement _cardElement;
-        private VisualElement _cardContainer;
-        private VisualElement _frontFace;
-        private VisualElement _backFace;
-        private VisualElement _glowEffect;
+        private VisualElement _cardImage;
+        private Sprite _backSprite;
+        private Sprite _frontSprite;
         private bool _isFlipped;
+        private bool _isMatched;
+        
+        // Инжектируем спрайт рубашки через настройки
+        public void Initialize(Sprite backSprite)
+        {
+            _backSprite = backSprite;
+        }
         
         public VisualElement CreateVisualElement()
         {
             _cardElement = new VisualElement();
             _cardElement.AddToClassList("card");
             
-            _cardContainer = new VisualElement();
-            _cardContainer.AddToClassList("card-container");
+            _cardImage = new VisualElement();
+            _cardImage.AddToClassList("card-face");
+            _cardImage.style.position = Position.Absolute;
             
-            _backFace = new VisualElement();
-            _backFace.AddToClassList("card-face");
-            _backFace.AddToClassList("card-back");
+            // Изначально показываем рубашку
             if (_backSprite != null)
             {
-                _backFace.style.backgroundImage = new StyleBackground(_backSprite);
+                _cardImage.style.backgroundImage = new StyleBackground(_backSprite);
             }
             
-            _frontFace = new VisualElement();
-            _frontFace.AddToClassList("card-face");
-            _frontFace.AddToClassList("card-front");
-            _frontFace.style.rotate = new Rotate(Angle.Degrees(180));
-            
-            _glowEffect = new VisualElement();
-            _glowEffect.AddToClassList("glow-effect");
-            
-            _cardContainer.Add(_backFace);
-            _cardContainer.Add(_frontFace);
-            _cardElement.Add(_cardContainer);
-            _cardElement.Add(_glowEffect);
+            _cardElement.Add(_cardImage);
             
             return _cardElement;
         }
@@ -68,41 +62,60 @@ namespace PairsGame.UI.Views
             if (_isFlipped == flipped) return;
             _isFlipped = flipped;
             
-            if (flipped)
+            AnimateFlip(flipped).Forget();
+        }
+        
+        private async UniTaskVoid AnimateFlip(bool flipped)
+        {
+            // Анимация сжатия
+            _cardElement.AddToClassList("card-flipping");
+            
+            // Ждем половину анимации
+            await UniTask.Delay(TimeSpan.FromSeconds(_flipDuration / 2));
+            
+            // Меняем спрайт
+            if (flipped && _frontSprite != null)
             {
-                _cardContainer.AddToClassList("flipped");
-                
-                // Добавляем эффект свечения при переворачивании
-                _glowEffect.style.opacity = 1;
-                _glowEffect.schedule.Execute(() =>
-                {
-                    _glowEffect.style.opacity = 0;
-                }).StartingIn(300);
+                _cardImage.style.backgroundImage = new StyleBackground(_frontSprite);
             }
-            else
+            else if (!flipped && _backSprite != null)
             {
-                _cardContainer.RemoveFromClassList("flipped");
+                _cardImage.style.backgroundImage = new StyleBackground(_backSprite);
             }
+            
+            // Ждем окончания анимации
+            await UniTask.Delay(TimeSpan.FromSeconds(_flipDuration / 2));
+            
+            _cardElement.RemoveFromClassList("card-flipping");
         }
         
         public void SetMatched(bool matched)
         {
+            if (_isMatched == matched) return;
+            _isMatched = matched;
+            
             if (matched)
             {
                 _cardElement.AddToClassList("matched");
                 
-                // Анимация исчезновения с масштабированием
-                _cardElement.schedule.Execute(() =>
-                {
-                    _cardElement.style.scale = new Scale(new Vector3(1.2f, 1.2f, 1));
-                }).StartingIn(100);
-                
-                _cardElement.schedule.Execute(() =>
-                {
-                    _cardElement.style.scale = new Scale(new Vector3(0.8f, 0.8f, 1));
-                    _cardElement.style.opacity = 0.3f;
-                }).StartingIn(300);
+                // Анимация успешного совпадения
+                ShowMatchEffect();
             }
+            else
+            {
+                _cardElement.RemoveFromClassList("matched");
+            }
+        }
+        
+        private void ShowMatchEffect()
+        {
+            // Эффект пульсации
+            _cardElement.AddToClassList("pulse");
+            
+            _cardElement.schedule.Execute(() =>
+            {
+                _cardElement.RemoveFromClassList("pulse");
+            }).StartingIn(300);
         }
         
         public void SetInteractable(bool interactable)
@@ -121,33 +134,7 @@ namespace PairsGame.UI.Views
         
         public void SetCardImage(Sprite sprite)
         {
-            if (sprite != null)
-            {
-                _frontFace.style.backgroundImage = new StyleBackground(sprite);
-            }
-        }
-        
-        public void ShowMatchEffect()
-        {
-            // Создаем эффект звезд
-            var starsContainer = new VisualElement();
-            starsContainer.AddToClassList("stars-container");
-            
-            for (int i = 0; i < 4; i++)
-            {
-                var star = new VisualElement();
-                star.AddToClassList("star");
-                star.style.rotate = new Rotate(Angle.Degrees(i * 90));
-                starsContainer.Add(star);
-            }
-            
-            _cardElement.Add(starsContainer);
-            
-            // Удаляем эффект через секунду
-            starsContainer.schedule.Execute(() =>
-            {
-                starsContainer.RemoveFromHierarchy();
-            }).StartingIn(1000);
+            _frontSprite = sprite;
         }
     }
 }
