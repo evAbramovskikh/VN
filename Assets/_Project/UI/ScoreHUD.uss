@@ -1,0 +1,13 @@
+﻿.score-label {
+    position: absolute;   /* фиксируем в правом-верхнем углу экрана */
+    top:   10px;
+    right: 10px;
+
+    font-size: 40px;
+    -unity-font-style: bold;
+    color: #ffffff;
+
+    /* лёгкий контур, чтобы текст не терялся на фоне картинок */
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: rgba(0,0,0,.6);
+}

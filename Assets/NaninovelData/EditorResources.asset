@@ -154,15 +154,15 @@ MonoBehaviour:
       guid: 0c068632b4f05d64e996f69c009b31d2
   - Id: Characters/cd743818-3f6b-48f3-a0e2-32c5cf01c70f
     Resources:
+    - name: Angry
+      pathPrefix: Characters/a
+      guid: e28a13b60b3f7034cbd8fc16583e3828
     - name: Idle
       pathPrefix: Characters/a
       guid: c508363f71292a64ebb69d5d4283cb39
     - name: Happy
       pathPrefix: Characters/a
       guid: 680da6f4366aef0419c02e67c39fa64c
-    - name: Angry
-      pathPrefix: Characters/a
-      guid: e28a13b60b3f7034cbd8fc16583e3828
   - Id: Scripts
     Resources:
     - name: _Project/Resources/Naninovel/Scripts/Intro

@@ -1,5 +1,5 @@
 @back Day
-@char a Idle pos:50,13
+@char a.Idle pos:50,13
 a "Пожалуйста, мне нужна ваша помощь! Справитесь?"
 
 @choice "Помочь"     goto:.Agree
@@ -25,13 +25,13 @@ a "Пожалуйста, мне нужна ваша помощь! Справит
 @checkScore good:.GoodEnd bad:.BadEnd MinGood:10
 
 # GoodEnd
-@char a Happy
+@char a.Happy
 a "Спасибо за помощь! Вы настоящий герой!"
 @title 
 @stop
 
 # BadEnd
-@char a Angry
+@char a.Angry
 a "Жаль, что вы отказались... Это было важно."
 @title
 @stop

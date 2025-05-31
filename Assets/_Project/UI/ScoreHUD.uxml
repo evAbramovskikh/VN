@@ -1,0 +1,4 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/ScoreHUD.uss?fileID=7433441132597879392&amp;guid=4cb853d0b0e440e3b6d6717471b5598f&amp;type=3#ScoreHUD" />
+    <ui:Label name="score-label" text="Очки: 0" class="score-label" style="height: 82px; width: 234px; -unity-text-align: upper-right; right: -1px; top: 0;" />
+</ui:UXML>
