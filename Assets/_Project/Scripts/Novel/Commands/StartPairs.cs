@@ -1,15 +1,32 @@
-﻿using System;
-using Naninovel;
+﻿using Naninovel;
+using UnityEngine.SceneManagement;
+using Cysharp.Threading.Tasks;
+using PairsGame.Application.Presenters;
+using NanoUniTask = Naninovel.UniTask;
+using UniRx;
 
 /// <summary>
-/// Временно имитирует мини-игру: просто ждёт 5 секунд и возвращается к сценарию.
+/// Загружает сцену мини-игры, ждёт победы, выгружает сцену.
+/// Вызывается из сценария:  @startPairs
 /// </summary>
 [CommandAlias("startPairs")]
 public sealed class StartPairs : Command
 {
-    public override async Naninovel.UniTask Execute (AsyncToken token = default)
+    public override async NanoUniTask Execute (AsyncToken token = default)
     {
-        // ждём 5 секунд, поддерживая отмену (Esc, переход к save/load и т.д.)
-        await Naninovel.UniTask.Delay(TimeSpan.FromSeconds(5), cancellationToken: token.CancellationToken);
+        // 1. Загружаем сцену
+        await SceneManager
+            .LoadSceneAsync("PairsGame", LoadSceneMode.Additive)
+            .ToUniTask(cancellationToken: token.CancellationToken);
+
+        // 2. Ждём событие победы
+        await PairsGameBridge.GameCompleted
+            .First()
+            .ToUniTask(cancellationToken: token.CancellationToken);
+
+        // 3. Выгружаем сцену
+        await SceneManager
+            .UnloadSceneAsync("PairsGame")
+            .ToUniTask(cancellationToken: token.CancellationToken);
     }
 }

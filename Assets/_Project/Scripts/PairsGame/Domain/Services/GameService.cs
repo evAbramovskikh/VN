@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
 using PairsGame.Domain.Models;
 using PairsGame.Domain.Commands;
 using UniRx;
 using Cysharp.Threading.Tasks;
+using PairsGame.Application.Presenters;
 
 namespace PairsGame.Domain.Services
 {
@@ -115,8 +115,8 @@ namespace PairsGame.Domain.Services
                 var command = new MatchCardsCommand(firstCard, secondCard, state);
                 await ExecuteCommand(command);
                 
-                _gameEvents.OnNext(new GameEvent(GameEventType.MatchFound, 
-                    new { First = firstCard, Second = secondCard }));
+                _gameEvents.OnNext(new GameEvent(GameEventType.MatchFound,
+                    new MatchFoundData(firstCard, secondCard)));
             }
             else
             {
@@ -157,8 +157,8 @@ namespace PairsGame.Domain.Services
                 .Where(completed => completed)
                 .Subscribe(_ => 
                 {
-                    _gameEvents.OnNext(new GameEvent(GameEventType.GameCompleted, 
-                        new { Moves = state.MovesCount.Value }));
+                    _gameEvents.OnNext(new GameEvent(GameEventType.GameCompleted,
+                        new GameCompletedData(state.MovesCount.Value)));
                 })
                 .AddTo(_disposables);
         }

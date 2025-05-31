@@ -1,217 +1,239 @@
-﻿
-using System;
+﻿using System;
 using System.Linq;
+using Cysharp.Threading.Tasks;
+using UniRx;
+using VContainer.Unity;
 using PairsGame.Domain.Models;
 using PairsGame.Domain.Services;
 using PairsGame.Infrastructure;
 using PairsGame.UI.Views;
-using UniRx;
-using Cysharp.Threading.Tasks;
-using VContainer.Unity;
 
 namespace PairsGame.Application.Presenters
 {
-    /// <summary>
-    /// Презентер игры с реактивным подходом
-    /// </summary>
-    public sealed class PairsGamePresenter : IPairsGamePresenter, IInitializable
+    /// <summary>Данные для события «пара найдена».</summary>
+    public readonly struct MatchFoundData
     {
-        private readonly IGameService _gameService;
-        private readonly IPairsGameView _gameView;
-        private readonly GameSettings _gameSettings;
-        private readonly CompositeDisposable _disposables;
-        
+        public MatchFoundData(Card first, Card second)
+        {
+            First  = first;
+            Second = second;
+        }
+
+        public Card First  { get; }
+        public Card Second { get; }
+    }
+
+    /// <summary>Данные для события «игра завершена».</summary>
+    public readonly struct GameCompletedData
+    {
+        public GameCompletedData(int moves) => Moves = moves;
+        public int Moves { get; }
+    }
+
+    /// <summary>
+    /// Реактивный презентер мини-игры без использования dynamic.
+    /// </summary>
+    public sealed class PairsGamePresenter : IPairsGamePresenter, IInitializable, IDisposable
+    {
+        private readonly IGameService     _gameService;
+        private readonly IPairsGameView   _gameView;
+        private readonly GameSettings     _settings;
+        private readonly CompositeDisposable _disposables = new();
+
         public PairsGamePresenter(
-            IGameService gameService,
+            IGameService   gameService,
             IPairsGameView gameView,
-            GameSettings gameSettings)
+            GameSettings   settings)
         {
             _gameService = gameService;
-            _gameView = gameView;
-            _gameSettings = gameSettings;
-            _disposables = new CompositeDisposable();
+            _gameView    = gameView;
+            _settings    = settings;
         }
         
-        void IInitializable.Initialize()
-        {
-            Initialize().Forget();
-        }
-        
+        /// <summary>
+        /// IInitializable
+        /// </summary>
+
+        void IInitializable.Initialize() => Initialize().Forget();
+
         public async UniTask Initialize()
         {
-            // Подписываемся на клики по картам с throttle для предотвращения двойных кликов
-            _gameView.OnCardClicked
-                .ThrottleFirst(TimeSpan.FromMilliseconds(300))
-                .Subscribe(index => OnCardClicked(index).Forget())
-                .AddTo(_disposables);
-            
-            // Подписываемся на изменения состояния игры
-            _gameService.CurrentGameState
-                .Where(state => state != null)
-                .Subscribe(BindGameState)
-                .AddTo(_disposables);
-            
-            // Подписываемся на игровые события
-            SetupEventSubscriptions();
-            
-            // Начинаем новую игру
+            SubscribeCardClicks();
+            SubscribeGameState();
+            SubscribeGameEvents();
+
             await StartGame();
         }
-        
-        private void SetupEventSubscriptions()
-        {
-            // Реагируем на различные игровые события
-            _gameService.GameEvents
-                .Subscribe(gameEvent =>
-                {
-                    switch (gameEvent.Type)
-                    {
-                        case GameEventType.GameStarted:
-                            _gameView.ShowStartAnimation();
-                            break;
-                            
-                        case GameEventType.MatchFound:
-                            if (gameEvent.Data is { } matchData)
-                            {
-                                var data = (dynamic)matchData;
-                                _gameView.ShowMatchAnimation(data.First.Position, data.Second.Position);
-                                _gameView.PlaySound(SoundType.Match);
-                            }
-                            break;
-                            
-                        case GameEventType.MismatchFound:
-                            _gameView.PlaySound(SoundType.Mismatch);
-                            break;
-                            
-                        case GameEventType.CardFlipped:
-                            _gameView.PlaySound(SoundType.Flip);
-                            break;
-                            
-                        case GameEventType.GameCompleted:
-                            OnGameCompleted(gameEvent.Data).Forget();
-                            break;
-                    }
-                })
-                .AddTo(_disposables);
-            
-            // Интеграция с Naninovel через глобальные события
-            _gameService.GameEvents
-                .Where(e => e.Type == GameEventType.GameCompleted)
-                .Subscribe(_ => PairsGameBridge.NotifyGameCompleted())
-                .AddTo(_disposables);
-        }
-        
+
+        /// <summary>
+        /// Public API
+        /// </summary>
+
         public async UniTask StartGame()
         {
             _gameView.ShowLoading();
-            
             await _gameService.StartNewGame();
-            
             _gameView.HideLoading();
         }
-        
+
         public async UniTask OnCardClicked(int cardIndex)
         {
             var state = _gameService.CurrentGameState.Value;
-            if (state == null || cardIndex >= state.Cards.Count) return;
-            
-            var card = state.Cards[cardIndex];
-            await _gameService.TryFlipCard(card);
+            if (state == null || cardIndex < 0 || cardIndex >= state.Cards.Count)
+                return;
+
+            await _gameService.TryFlipCard(state.Cards[cardIndex]);
         }
+
+        /// <summary>
+        /// Subscriptions
+        /// </summary>
+
+        private void SubscribeCardClicks()
+        {
+            _gameView.OnCardClicked
+                     .ThrottleFirst(TimeSpan.FromMilliseconds(300))
+                     .Subscribe(i => OnCardClicked(i).Forget())
+                     .AddTo(_disposables);
+        }
+
+        private void SubscribeGameState()
+        {
+            _gameService.CurrentGameState
+                        .Where(s => s != null)
+                        .Subscribe(BindGameState)
+                        .AddTo(_disposables);
+        }
+
+        private void SubscribeGameEvents()
+        {
+            _gameService.GameEvents
+                        .Subscribe(HandleGameEvent)
+                        .AddTo(_disposables);
+
+            _gameService.GameEvents
+                        .Where(e => e.Type == GameEventType.GameCompleted)
+                        .Subscribe(_ => PairsGameBridge.NotifyGameCompleted())
+                        .AddTo(_disposables);
+        }
+
+        private void HandleGameEvent(GameEvent e)
+        {
+            switch (e.Type)
+            {
+                case GameEventType.GameStarted:
+                    _gameView.ShowStartAnimation();
+                    break;
+
+                case GameEventType.CardFlipped:
+                    _gameView.PlaySound(SoundType.Flip);
+                    break;
+
+                case GameEventType.MatchFound:
+                    if (e.Data is MatchFoundData m)
+                    {
+                        _gameView.ShowMatchAnimation(m.First.Position, m.Second.Position);
+                    }
+                    _gameView.PlaySound(SoundType.Match);
+                    break;
+
+                case GameEventType.MismatchFound:
+                    _gameView.PlaySound(SoundType.Mismatch);
+                    break;
+
+                case GameEventType.GameCompleted:
+                    HandleGameCompleted(e.Data).Forget();
+                    break;
+            }
+        }
+
         
+        /// <summary>
+        /// Bindings
+        /// </summary>
+
         private void BindGameState(GameState state)
         {
-            // Реактивно обновляем UI
-            // Счетчик ходов
             state.MovesCount
-                .Subscribe(moves => _gameView.SetMovesCount(moves))
-                .AddTo(_disposables);
-            
-            // Счетчик найденных пар
+                 .Subscribe(_gameView.SetMovesCount)
+                 .AddTo(_disposables);
+
             state.MatchesFound
-                .CombineLatest(
-                    Observable.Return(state.TotalPairs),
-                    (matches, total) => new { matches, total })
-                .Subscribe(data => _gameView.SetMatchesCount(data.matches, data.total))
-                .AddTo(_disposables);
-            
-            // Блокировка UI во время обработки
+                 .CombineLatest(Observable.Return(state.TotalPairs),
+                                (m, t) => (m, t))
+                 .Subscribe(x => _gameView.SetMatchesCount(x.m, x.t))
+                 .AddTo(_disposables);
+
             state.IsProcessing
-                .Subscribe(processing => _gameView.SetInteractionEnabled(!processing))
-                .AddTo(_disposables);
-            
-            // Обновляем состояние каждой карты
-            BindCardViews(state);
+                 .Subscribe(p => _gameView.SetInteractionEnabled(!p))
+                 .AddTo(_disposables);
+
+            BindCards(state);
         }
-        
-        private void BindCardViews(GameState state)
+
+        private void BindCards(GameState state)
         {
             for (int i = 0; i < state.Cards.Count; i++)
             {
-                var card = state.Cards[i];
+                var card     = state.Cards[i];
                 var cardView = _gameView.GetCardView(i);
-                
-                if (cardView != null)
-                {
-                    // Устанавливаем спрайт для лицевой стороны карты
-                    var frontSprite = _gameSettings.GetCardSprite(card.PairId);
-                    cardView.SetCardImage(frontSprite);
-                    
-                    // Реактивная подписка на все изменения карты
-                    Observable.CombineLatest(
-                        card.IsFlipped,
-                        card.IsMatched,
-                        card.IsInteractable,
-                        (flipped, matched, interactable) => new { flipped, matched, interactable })
-                        .Subscribe(cardState =>
-                        {
-                            cardView.SetFlipped(cardState.flipped);
-                            cardView.SetMatched(cardState.matched);
-                            cardView.SetInteractable(cardState.interactable);
-                        })
-                        .AddTo(_disposables);
-                }
+                if (cardView == null) continue;
+
+                cardView.SetCardImage(_settings.GetCardSprite(card.PairId));
+
+                Observable.CombineLatest(card.IsFlipped,
+                                         card.IsMatched,
+                                         card.IsInteractable,
+                                         (f, m, iable) => (f, m, iable))
+                          .Subscribe(s =>
+                          {
+                              cardView.SetFlipped(s.f);
+                              cardView.SetMatched(s.m);
+                              cardView.SetInteractable(s.iable);
+                          })
+                          .AddTo(_disposables);
             }
         }
         
-        private async UniTaskVoid OnGameCompleted(object data)
+        /// <summary>
+        /// Helpers
+        /// </summary>
+
+        private async UniTaskVoid HandleGameCompleted(object data)
         {
-            var completionData = (dynamic)data;
-            
+            var moves = data is GameCompletedData g ? g.Moves : 0;
+
             await UniTask.Delay(TimeSpan.FromSeconds(0.5f));
-            
-            _gameView.ShowGameCompleted(completionData.Moves);
+            _gameView.ShowGameCompleted(moves);
             _gameView.PlaySound(SoundType.Complete);
-            
-            // Ждем 2 секунды перед возвратом
+
+            // === отправляем сигнал, что игра окончена ===
+            PairsGameBridge.NotifyGameCompleted();
+
             await UniTask.Delay(TimeSpan.FromSeconds(2));
         }
         
+        /// <summary>
+        /// IDisposable
+        /// </summary>
+
         public void Dispose()
         {
-            _disposables?.Dispose();
-            _gameService?.Dispose();
+            _disposables.Dispose();
+            _gameService.Dispose();
         }
     }
     
     /// <summary>
-    /// Мост для коммуникации с Naninovel
+    /// мост в Naninovel
     /// </summary>
+    
     public static class PairsGameBridge
     {
         public static readonly Subject<Unit> GameCompleted = new();
-        
         public static void NotifyGameCompleted()
-        {
-            GameCompleted.OnNext(Unit.Default);
-        }
+            => GameCompleted.OnNext(Unit.Default);
     }
-    
-    public enum SoundType
-    {
-        Flip,
-        Match,
-        Mismatch,
-        Complete
-    }
+
+    public enum SoundType { Flip, Match, Mismatch, Complete }
 }

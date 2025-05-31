@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90b4ddb4bd5c41309b85072b7e6ceae5, type: 3}
+  m_Name: GameSettings
+  m_EditorClassIdentifier: 
+  CardBackSprite: {fileID: -9159389598406864244, guid: 835c67773e849d84fb60e6401f3300a9, type: 3}
+  CardSprites:
+  - {fileID: 8906535288332628968, guid: 8811454f56c6414479fb87c01f025393, type: 3}
+  - {fileID: -1739198746453962294, guid: 693cc32a778b41942bae9e54da5392c9, type: 3}
+  - {fileID: -8646038057354247821, guid: 1f75a103758f9ed44a287bd8495cc769, type: 3}
+  - {fileID: -9149595790079352919, guid: f66eec75ce3f8ff4db56215ec539dcdf, type: 3}
+  - {fileID: -1991224323112568568, guid: eb3fe5c227e8f2443b9a5b97f49d068a, type: 3}
+  - {fileID: -9109299201891457981, guid: a5f1f5cd741d56c4cb945fb1bd16bcbd, type: 3}
+  - {fileID: -5319029520119078399, guid: 1c43bc77c027c66409310b50c5e06341, type: 3}
+  - {fileID: -9155929770397124374, guid: 8a36b08378920e24fa6dfff6a4762b67, type: 3}
+  FlipAnimationDuration: 0.3
+  MatchCheckDelay: 1
+  CompletionDelay: 2
+  FlipSound: {fileID: 0}
+  MatchSound: {fileID: 0}
+  MismatchSound: {fileID: 0}
+  CompletionSound: {fileID: 0}
